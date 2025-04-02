@@ -4,6 +4,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const winston = require('winston');
 const path = require('path');
+const rateLimit = require('express-rate-limit');
 const { startCurator } = require('./services/ghosts/curator');
 
 // Import routes
@@ -26,10 +27,18 @@ const logger = winston.createLogger({
   ]
 });
 
+// Configure rate limiter
+const limiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 30, // limit each IP to 30 requests per minute
+  message: 'The void hears you. But slower, please.'
+});
+
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
+app.use(limiter);
 
 // Routes
 app.use('/api/input', inputRouter);
