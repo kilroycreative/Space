@@ -1,32 +1,44 @@
 # Dependencies
 node_modules/
-npm-debug.log
-yarn-debug.log
-yarn-error.log
+/.pnp
+.pnp.js
 
-# Environment variables
+# Environment
 .env
 .env.local
-.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# Build output
-dist/
-build/
-.next/
+# Build outputs
+/build
+/dist
+/.next
+/out
+
+# Data files
+/data/*.json
+/data/ghost-threads/
+/data/echoes/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
 
 # IDE and editor files
 .idea/
 .vscode/
 *.swp
 *.swo
-
-# OS files
 .DS_Store
 Thumbs.db
 
-# Logs
-logs/
-*.log
-
 # Testing
-coverage/ 
+/coverage
+.nyc_output
+
+# Misc
+.DS_Store
+*.pem 

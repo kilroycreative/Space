@@ -2,52 +2,73 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs').promises;
 const path = require('path');
+const { getEmbedding } = require('../utils/embeddings');
+const { searchArchive } = require('../utils/archive');
+
+// Tags that represent silence/peace
+const SILENCE_TAGS = ['peace', 'drift', 'quiet'];
 
 // Record moments of silence
 router.post('/', async (req, res) => {
   try {
-    const silence = {
-      id: Date.now(),
-      duration: req.body.duration || 0, // Duration in milliseconds
-      context: req.body.context || 'intentional', // intentional or natural
-      timestamp: new Date().toISOString()
-    };
-
-    const silencePath = path.join(__dirname, '../../data/silence.json');
-    let silences = [];
+    // Check if we should generate a poetic thought (20% chance)
+    const shouldGeneratePoem = Math.random() < 0.2;
     
-    try {
-      const data = await fs.readFile(silencePath, 'utf8');
-      silences = JSON.parse(data);
-    } catch (err) {
-      // File doesn't exist or is empty
+    if (shouldGeneratePoem) {
+      // Generate a contemplative thought
+      const silencePrompts = [
+        'The space between words...',
+        'In the quiet, we find...',
+        'Silence speaks in...',
+        'Between breaths...',
+        'The void whispers...'
+      ];
+      const prompt = silencePrompts[Math.floor(Math.random() * silencePrompts.length)];
+      
+      // TODO: Integrate with your text generation service
+      // For now, we'll just return the prompt
+      return res.json({
+        type: 'generated',
+        content: prompt,
+        tags: ['generated', 'silence'],
+        timestamp: new Date().toISOString()
+      });
     }
 
-    silences.push(silence);
-    await fs.writeFile(silencePath, JSON.stringify(silences, null, 2));
+    // 30% chance of returning nothing
+    if (Math.random() < 0.3) {
+      return res.json({
+        type: 'void',
+        content: null,
+        timestamp: new Date().toISOString()
+      });
+    }
 
-    // Generate a poetic response to silence
-    const responses = [
-      'The void acknowledges your presence.',
-      'In silence, meaning resonates.',
-      'Empty spaces hold infinite potential.',
-      'Your silence echoes through digital space.',
-      'Nothing speaks volumes.'
-    ];
-
-    const response = responses[Math.floor(Math.random() * responses.length)];
-
-    res.json({ 
-      success: true, 
-      silence_id: silence.id,
-      response 
+    // Otherwise, find a peaceful entry from the archive
+    const silenceEmbedding = await getEmbedding('silence peace tranquility');
+    const results = await searchArchive({
+      embedding: silenceEmbedding,
+      tags: SILENCE_TAGS,
+      limit: 1
     });
+
+    if (results.length === 0) {
+      return res.json({
+        type: 'void',
+        content: null,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      type: 'archive',
+      ...results[0],
+      timestamp: new Date().toISOString()
+    });
+
   } catch (error) {
-    console.error('Error recording silence:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to record silence' 
-    });
+    console.error('Silence Engine Error:', error);
+    res.status(500).json({ error: 'Failed to process silence' });
   }
 });
 

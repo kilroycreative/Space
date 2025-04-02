@@ -1,14 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { OpenAI } = require('openai');
-const { mapTextToEmotion } = require('../utils/emotion-map');
 const { classifyEmotion } = require('../utils/classifyEmotion');
+const { getEmbedding } = require('../utils/embeddings');
 const fs = require('fs').promises;
 const path = require('path');
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
 
 // Handle text input
 router.post('/', async (req, res) => {
@@ -20,8 +15,8 @@ router.post('/', async (req, res) => {
     let emotionDetails;
     
     if (type === 'text') {
-      // Get emotional embedding from text
-      embedding = mapTextToEmotion(content);
+      // Get emotional embedding from OpenAI
+      embedding = await getEmbedding(content);
       
       // Get detailed emotion classification
       emotionDetails = classifyEmotion(embedding);

@@ -3,6 +3,8 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const winston = require('winston');
+const path = require('path');
+const { startCurator } = require('./services/ghosts/curator');
 
 // Import routes
 const inputRouter = require('./routes/input');
@@ -33,6 +35,19 @@ app.use(morgan('dev'));
 app.use('/api/input', inputRouter);
 app.use('/api/search', searchRouter);
 app.use('/api/silence', silenceRouter);
+app.use('/api/trace', require('./routes/trace'));
+
+// Start the curator service
+startCurator();
+
+// Serve static files from the React app
+app.use(express.static(path.join(__dirname, '../client/build')));
+
+// The "catchall" handler: for any request that doesn't
+// match one above, send back React's index.html file.
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/build/index.html'));
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {
