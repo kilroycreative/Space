@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: monday-cathedral-worker
+    runtime: docker
+    dockerfilePath: worker/Dockerfile
+    branch: claude/clone-openplanter-okhLY
+    region: oregon
+    plan: free
+    envVars:
+      - key: CONVEX_URL
+        value: https://brazen-alpaca-328.convex.cloud
+      - key: OPENROUTER_API_KEY
+        sync: false
