@@ -1,86 +1,172 @@
-# Space
+# OpenPlanter
 
-A digital sanctuary for emotional resonance and meaningful silence. This project explores the intersection of human emotion, digital spaces, and the power of absence.
+A recursive-language-model investigation agent with a terminal UI. OpenPlanter ingests heterogeneous datasets — corporate registries, campaign finance records, lobbying disclosures, government contracts, and more — resolves entities across them, and surfaces non-obvious connections through evidence-backed analysis. It operates autonomously with file I/O, shell execution, web search, and recursive sub-agent delegation.
 
-## Philosophy
+## Quickstart
 
-Space is not just another web application - it's an exploration of digital emotional resonance. It challenges the constant noise of the modern web by creating intentional spaces for:
+```bash
+# Install
+pip install -e .
 
-- **Emotional Expression**: A canvas for sharing feelings without the constraints of traditional social media
-- **Resonant Connections**: Finding echoes of similar emotional experiences across the digital void
-- **Meaningful Silence**: Embracing the power of absence and the spaces between interactions
+# Configure API keys (interactive prompt)
+openplanter-agent --configure-keys
 
-## Features
+# Launch the TUI
+openplanter-agent --workspace /path/to/your/project
+```
 
-- 🎨 **Infinite Canvas**: A boundless space for emotional expression
-- 🔮 **Emotional Embeddings**: Advanced mapping of emotional content to find resonant connections
-- 🌌 **Echoes**: Discover content that resonates with your emotional state
-- 🕊️ **Silence Protocol**: A unique feature that values and records moments of digital silence
+Or run a single task headlessly:
 
-## Technical Architecture
+```bash
+openplanter-agent --task "Cross-reference vendor payments against lobbying disclosures and flag overlaps" --workspace ./data
+```
 
-- **Frontend**: React with styled-components and Framer Motion for fluid animations
-- **Backend**: Express.js server with emotional processing capabilities
-- **Data Storage**: File-based JSON storage (can be extended to PostgreSQL)
-- **AI Integration**: OpenAI API for enhanced emotional understanding (optional)
+### Docker
 
-## Getting Started
+```bash
+# Add your API keys to .env, then:
+docker compose up
+```
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/space.git
-   cd space
-   ```
+The container mounts `./workspace` as the agent's working directory.
 
-2. Install dependencies:
-   ```bash
-   npm run install:all
-   ```
+## Supported Providers
 
-3. Set up environment variables:
-   ```bash
-   cp .env.example .env
-   # Edit .env with your configuration
-   ```
+| Provider | Default Model | Env Var |
+|----------|---------------|---------|
+| OpenAI | `gpt-5.2` | `OPENAI_API_KEY` |
+| Anthropic | `claude-opus-4-6` | `ANTHROPIC_API_KEY` |
+| OpenRouter | `anthropic/claude-sonnet-4-5` | `OPENROUTER_API_KEY` |
+| Cerebras | `qwen-3-235b-a22b-instruct-2507` | `CEREBRAS_API_KEY` |
 
-4. Start the development servers:
-   ```bash
-   npm start
-   ```
+Additional service keys: `EXA_API_KEY` (web search), `VOYAGE_API_KEY` (embeddings).
 
-The application will be available at:
-- Frontend: http://localhost:3000
-- Backend: http://localhost:3001
+All keys can also be set with an `OPENPLANTER_` prefix (e.g. `OPENPLANTER_OPENAI_API_KEY`), via `.env` files in the workspace, or via CLI flags.
+
+## Agent Tools
+
+The agent has access to 19 tools, organized around its investigation workflow:
+
+**Dataset ingestion & workspace** — `list_files`, `search_files`, `repo_map`, `read_file`, `write_file`, `edit_file`, `hashline_edit`, `apply_patch` — load, inspect, and transform source datasets; write structured findings.
+
+**Shell execution** — `run_shell`, `run_shell_bg`, `check_shell_bg`, `kill_shell_bg` — run analysis scripts, data pipelines, and validation checks.
+
+**Web** — `web_search` (Exa), `fetch_url` — pull public records, verify entities, and retrieve supplementary data.
+
+**Planning & delegation** — `think`, `subtask`, `execute`, `list_artifacts`, `read_artifact` — decompose investigations into focused sub-tasks, each with acceptance criteria and independent verification.
+
+In **recursive mode** (the default), the agent spawns sub-agents via `subtask` and `execute` to parallelize entity resolution, cross-dataset linking, and evidence-chain construction across large investigations.
+
+## CLI Reference
+
+```
+openplanter-agent [options]
+```
+
+### Workspace & Session
+
+| Flag | Description |
+|------|-------------|
+| `--workspace DIR` | Workspace root (default: `.`) |
+| `--session-id ID` | Use a specific session ID |
+| `--resume` | Resume the latest (or specified) session |
+| `--list-sessions` | List saved sessions and exit |
+
+### Model Selection
+
+| Flag | Description |
+|------|-------------|
+| `--provider NAME` | `auto`, `openai`, `anthropic`, `openrouter`, `cerebras` |
+| `--model NAME` | Model name or `newest` to auto-select |
+| `--reasoning-effort LEVEL` | `low`, `medium`, `high`, or `none` |
+| `--list-models` | Fetch available models from the provider API |
+
+### Execution
+
+| Flag | Description |
+|------|-------------|
+| `--task OBJECTIVE` | Run a single task and exit (headless) |
+| `--recursive` | Enable recursive sub-agent delegation |
+| `--acceptance-criteria` | Judge subtask results with a lightweight model |
+| `--max-depth N` | Maximum recursion depth (default: 4) |
+| `--max-steps N` | Maximum steps per call (default: 100) |
+| `--timeout N` | Shell command timeout in seconds (default: 45) |
+
+### UI
+
+| Flag | Description |
+|------|-------------|
+| `--no-tui` | Plain REPL (no colors or spinner) |
+| `--headless` | Non-interactive mode (for CI) |
+| `--demo` | Censor entity names and workspace paths in output |
+
+### Persistent Defaults
+
+Use `--default-model`, `--default-reasoning-effort`, or per-provider variants like `--default-model-openai` to save workspace defaults to `.openplanter/settings.json`. View them with `--show-settings`.
+
+## TUI Commands
+
+Inside the interactive REPL:
+
+| Command | Action |
+|---------|--------|
+| `/model` | Show current model and provider |
+| `/model NAME` | Switch model (aliases: `opus`, `sonnet`, `gpt5`, etc.) |
+| `/model NAME --save` | Switch and persist as default |
+| `/model list [all]` | List available models |
+| `/reasoning LEVEL` | Change reasoning effort |
+| `/status` | Show session status and token usage |
+| `/clear` | Clear the screen |
+| `/quit` | Exit |
+
+## Configuration
+
+Keys are resolved in this priority order (highest wins):
+
+1. CLI flags (`--openai-api-key`, etc.)
+2. Environment variables (`OPENAI_API_KEY` or `OPENPLANTER_OPENAI_API_KEY`)
+3. `.env` file in the workspace
+4. Workspace credential store (`.openplanter/credentials.json`)
+5. User credential store (`~/.openplanter/credentials.json`)
+
+All runtime settings can also be set via `OPENPLANTER_*` environment variables (e.g. `OPENPLANTER_MAX_DEPTH=8`).
 
 ## Project Structure
 
 ```
-space/
-├── README.md                  # Project documentation
-├── package.json              # Project metadata and dependencies
-├── server/                   # Backend logic
-│   ├── routes/              # API endpoints
-│   ├── embeddings/          # Emotional embedding logic
-│   └── utils/               # Utility functions
-├── client/                  # Frontend application
-│   ├── src/                
-│   │   ├── components/      # React components
-│   │   ├── hooks/          # Custom React hooks
-│   │   └── styles/         # Styling utilities
-└── data/                    # Data storage
-    ├── entries.json        # User submissions
-    ├── echoes.json        # Resonant connections
-    └── silence.json       # Silence records
+agent/
+  __main__.py    CLI entry point and REPL
+  engine.py      Recursive language model engine
+  runtime.py     Session persistence and lifecycle
+  model.py       Provider-agnostic LLM abstraction
+  builder.py     Engine/model factory
+  tools.py       Workspace tool implementations
+  tool_defs.py   Tool JSON schemas
+  prompts.py     System prompt construction
+  config.py      Configuration dataclass
+  credentials.py Credential management
+  tui.py         Rich terminal UI
+  demo.py        Demo mode (output censoring)
+  patching.py    File patching utilities
+  settings.py    Persistent settings
+tests/           Unit and integration tests
 ```
 
-## Contributing
+## Development
 
-Space is an open exploration of digital emotional expression. Contributions that align with the project's philosophy are welcome. Please read our contribution guidelines before submitting pull requests.
+```bash
+# Install in editable mode
+pip install -e .
+
+# Run tests
+python -m pytest tests/
+
+# Skip live API tests
+python -m pytest tests/ --ignore=tests/test_live_models.py --ignore=tests/test_integration_live.py
+```
+
+Requires Python 3.10+. Dependencies: `rich`, `prompt_toolkit`, `pyfiglet`.
 
 ## License
 
-MIT License - Feel free to use this code to create your own digital sanctuaries.
-
----
-
-*"In the vastness of digital space, every emotion finds its echo."* 
+See [VISION.md](VISION.md) for the project's design philosophy and roadmap.
