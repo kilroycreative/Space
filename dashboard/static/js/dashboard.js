@@ -366,6 +366,7 @@
         if (state.isRunning) return;
         state.currentSession = sessionId;
         if (dom.sessionIdDisplay) dom.sessionIdDisplay.textContent = sessionId;
+        if (window.innerWidth <= 768) closeMobileSidebar();
 
         fetch(`/api/sessions/${sessionId}/events`)
             .then((r) => r.json())
@@ -482,12 +483,39 @@
     }
 
     // -----------------------------------------------------------------------
+    // Mobile sidebar toggle
+    // -----------------------------------------------------------------------
+    function closeMobileSidebar() {
+        const sidebar = $("#sidebar");
+        const overlay = $("#sidebar-overlay");
+        if (sidebar) sidebar.classList.remove("open");
+        if (overlay) overlay.classList.remove("open");
+    }
+
+    function initMobileSidebar() {
+        const menuBtn = $("#menu-btn");
+        const sidebar = $("#sidebar");
+        const overlay = $("#sidebar-overlay");
+        const closeBtn = $("#sidebar-close-btn");
+
+        function openSidebar() {
+            sidebar.classList.add("open");
+            overlay.classList.add("open");
+        }
+
+        if (menuBtn) menuBtn.addEventListener("click", openSidebar);
+        if (overlay) overlay.addEventListener("click", closeMobileSidebar);
+        if (closeBtn) closeBtn.addEventListener("click", closeMobileSidebar);
+    }
+
+    // -----------------------------------------------------------------------
     // Init
     // -----------------------------------------------------------------------
     function init() {
         connect();
         loadConfig();
         refreshSessions();
+        initMobileSidebar();
 
         // Event listeners
         dom.startBtn.addEventListener("click", startInvestigation);

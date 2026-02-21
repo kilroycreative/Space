@@ -52,6 +52,16 @@ const AppContainer = styled.div`
   gap: 2rem;
   padding: 2rem;
   background: radial-gradient(circle at center, #1a1a1a 0%, #0a0a0a 100%);
+
+  @media (max-width: 768px) {
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  @media (max-width: 480px) {
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
 `;
 
 const App = () => {

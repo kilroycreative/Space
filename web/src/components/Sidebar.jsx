@@ -1,11 +1,29 @@
 import React from "react";
 
-export default function Sidebar({ sessions, activeSessionId, onSelectSession, isRunning }) {
+export default function Sidebar({ sessions, activeSessionId, onSelectSession, isRunning, isMobile, isOpen, onClose }) {
+  if (isMobile && !isOpen) return null;
+
+  const sidebarStyle = isMobile
+    ? { ...styles.sidebar, ...styles.sidebarMobile }
+    : styles.sidebar;
+
   return (
-    <aside style={styles.sidebar}>
-      <div style={styles.section}>
-        <h3 style={styles.sectionTitle}>Sessions</h3>
-      </div>
+    <aside style={sidebarStyle}>
+      {isMobile && (
+        <div style={styles.mobileHeader}>
+          <h3 style={styles.sectionTitle}>Sessions</h3>
+          <button style={styles.closeBtn} onClick={onClose} aria-label="Close sidebar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+      )}
+      {!isMobile && (
+        <div style={styles.section}>
+          <h3 style={styles.sectionTitle}>Sessions</h3>
+        </div>
+      )}
       <div style={styles.list}>
         {sessions.length === 0 && (
           <div style={styles.empty}>No sessions yet</div>
@@ -65,6 +83,35 @@ const styles = {
     borderRight: "1px solid var(--border)",
     overflow: "hidden",
   },
+  sidebarMobile: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: "85%",
+    maxWidth: 320,
+    zIndex: 50,
+    boxShadow: "4px 0 24px rgba(0, 0, 0, 0.4)",
+  },
+  mobileHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "16px",
+    borderBottom: "1px solid var(--border)",
+  },
+  closeBtn: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "none",
+    border: "none",
+    color: "var(--text-secondary)",
+    cursor: "pointer",
+    padding: 6,
+    borderRadius: 6,
+    WebkitTapHighlightColor: "transparent",
+  },
   section: { padding: "16px", borderBottom: "1px solid var(--border)" },
   sectionTitle: {
     fontSize: 11,
@@ -72,6 +119,7 @@ const styles = {
     textTransform: "uppercase",
     letterSpacing: 1,
     color: "var(--text-muted)",
+    margin: 0,
   },
   list: { flex: 1, overflowY: "auto", padding: 8 },
   empty: {

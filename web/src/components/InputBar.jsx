@@ -6,7 +6,7 @@ const EXAMPLES = [
   "Analyze government contract awards and identify patterns of concentration",
 ];
 
-export default function InputBar({ onSubmit, onStop, isRunning, isStarting }) {
+export default function InputBar({ onSubmit, onStop, isRunning, isStarting, isMobile }) {
   const [objective, setObjective] = useState("");
   const [provider, setProvider] = useState("auto");
   const [model, setModel] = useState("claude-opus-4-6");
@@ -39,63 +39,82 @@ export default function InputBar({ onSubmit, onStop, isRunning, isStarting }) {
     }
   }
 
+  const inputAreaStyle = isMobile
+    ? { ...styles.inputArea, padding: "12px" }
+    : styles.inputArea;
+
+  const inputRowStyle = isMobile
+    ? { ...styles.inputRow, gap: 8 }
+    : styles.inputRow;
+
+  const textareaStyle = isMobile
+    ? { ...styles.textarea, padding: "10px 12px", fontSize: 14 }
+    : styles.textarea;
+
+  const btnStyle = isMobile
+    ? { padding: "10px 14px" }
+    : {};
+
   return (
-    <div style={styles.inputArea}>
-      <div style={styles.inputRow}>
+    <div style={inputAreaStyle}>
+      <div style={inputRowStyle}>
         <textarea
           ref={textareaRef}
-          style={styles.textarea}
+          style={textareaStyle}
           value={objective}
           onChange={(e) => setObjective(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Describe your investigation objective..."
+          placeholder={isMobile ? "Investigation objective..." : "Describe your investigation objective..."}
           disabled={isRunning}
           rows={1}
         />
         <div style={styles.controls}>
           {isRunning ? (
-            <button style={styles.stopBtn} onClick={onStop}>
+            <button style={{ ...styles.stopBtn, ...btnStyle }} onClick={onStop}>
               Stop
             </button>
           ) : (
             <button
               style={{
                 ...styles.startBtn,
+                ...btnStyle,
                 opacity: isStarting ? 0.5 : 1,
               }}
               onClick={handleSubmit}
               disabled={isStarting || !objective.trim()}
             >
-              {isStarting ? "Starting..." : "Investigate"}
+              {isStarting ? "..." : isMobile ? "Go" : "Investigate"}
             </button>
           )}
         </div>
       </div>
       <div style={styles.configRow}>
-        <select style={styles.select} value={provider} onChange={handleProviderChange}>
+        <select style={isMobile ? { ...styles.select, flex: 1 } : styles.select} value={provider} onChange={handleProviderChange}>
           <option value="auto">Auto</option>
           <option value="anthropic">Anthropic</option>
           <option value="openai">OpenAI</option>
           <option value="openrouter">OpenRouter</option>
           <option value="cerebras">Cerebras</option>
         </select>
-        <select style={styles.select} value={model} onChange={(e) => setModel(e.target.value)}>
+        <select style={isMobile ? { ...styles.select, flex: 1, minWidth: 0 } : styles.select} value={model} onChange={(e) => setModel(e.target.value)}>
           {(MODEL_OPTIONS[provider] ?? MODEL_OPTIONS.auto).map((m) => (
             <option key={m} value={m}>{m}</option>
           ))}
         </select>
-        <div style={styles.examples}>
-          {EXAMPLES.map((ex, i) => (
-            <button
-              key={i}
-              style={styles.exampleBtn}
-              onClick={() => setObjective(ex)}
-              disabled={isRunning}
-            >
-              {ex.split(" ").slice(0, 3).join(" ")}...
-            </button>
-          ))}
-        </div>
+        {!isMobile && (
+          <div style={styles.examples}>
+            {EXAMPLES.map((ex, i) => (
+              <button
+                key={i}
+                style={styles.exampleBtn}
+                onClick={() => setObjective(ex)}
+                disabled={isRunning}
+              >
+                {ex.split(" ").slice(0, 3).join(" ")}...
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -106,6 +125,7 @@ const styles = {
     padding: "16px 24px",
     background: "var(--bg-secondary)",
     borderBottom: "1px solid var(--border)",
+    flexShrink: 0,
   },
   inputRow: { display: "flex", gap: 12, alignItems: "flex-start" },
   textarea: {
@@ -122,8 +142,9 @@ const styles = {
     minHeight: 44,
     maxHeight: 120,
     lineHeight: 1.5,
+    minWidth: 0,
   },
-  controls: { display: "flex", gap: 8 },
+  controls: { display: "flex", gap: 8, flexShrink: 0 },
   startBtn: {
     padding: "10px 20px",
     fontFamily: "var(--font-sans)",
@@ -165,7 +186,7 @@ const styles = {
     outline: "none",
     cursor: "pointer",
   },
-  examples: { display: "flex", gap: 6, marginLeft: "auto" },
+  examples: { display: "flex", gap: 6, marginLeft: "auto", flexWrap: "wrap" },
   exampleBtn: {
     padding: "4px 10px",
     fontSize: 11,
