@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "strict": true,
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "target": "ESNext",
+    "module": "ESNext",
+    "paths": {
+      "convex/_generated/*": ["./_generated/*"]
+    }
+  },
+  "include": ["./**/*"],
+  "exclude": ["_generated"]
+}
