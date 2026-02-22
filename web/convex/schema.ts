@@ -8,6 +8,7 @@ export default defineSchema({
     objective: v.string(),
     provider: v.string(),
     model: v.string(),
+    config: v.optional(v.any()),
     status: v.union(
       v.literal("running"),
       v.literal("completed"),

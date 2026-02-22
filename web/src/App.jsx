@@ -34,15 +34,19 @@ export default function App() {
   }, [events.length]);
 
   // Start an investigation by calling the Python worker
-  async function startInvestigation(objective, provider, model) {
+  async function startInvestigation(objective, provider, model, configOverrides) {
     if (!objective.trim() || isStarting) return;
     setIsStarting(true);
 
     try {
+      const body = { objective, provider, model };
+      if (configOverrides && Object.keys(configOverrides).length > 0) {
+        body.config = configOverrides;
+      }
       const resp = await fetch(`${WORKER_URL}/api/investigate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ objective, provider, model }),
+        body: JSON.stringify(body),
       });
 
       if (!resp.ok) {

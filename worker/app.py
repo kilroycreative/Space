@@ -94,6 +94,7 @@ def _run_investigation(
     objective: str,
     provider: str,
     model_name: str,
+    config_overrides: dict[str, Any] | None = None,
 ):
     """Run an investigation in a background thread, pushing events to Convex."""
     cfg = AgentConfig.from_env(WORKSPACE)
@@ -101,6 +102,20 @@ def _run_investigation(
         cfg.provider = provider
     if model_name:
         cfg.model = model_name
+
+    # Apply user-supplied config overrides from the guided settings panel
+    if config_overrides:
+        _allowed = {
+            "recursive", "max_depth", "max_steps_per_call",
+            "reasoning_effort", "acceptance_criteria", "demo",
+        }
+        for key, value in config_overrides.items():
+            if key in _allowed and hasattr(cfg, key):
+                expected_type = type(getattr(cfg, key))
+                try:
+                    setattr(cfg, key, expected_type(value))
+                except (TypeError, ValueError):
+                    pass  # skip invalid values silently
 
     # Verify we have API keys
     if not any([cfg.openai_api_key, cfg.anthropic_api_key, cfg.openrouter_api_key, cfg.cerebras_api_key]):
@@ -235,6 +250,7 @@ def start_investigation():
 
     provider = data.get("provider", "auto")
     model_name = data.get("model", "")
+    config_overrides = data.get("config")  # optional dict of agent config overrides
 
     # Generate session ID
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
@@ -242,17 +258,20 @@ def start_investigation():
     session_id = f"{stamp}-{secrets.token_hex(3)}"
 
     # Create session in Convex
-    convex.mutation("sessions:create", {
+    create_args: dict[str, Any] = {
         "sessionId": session_id,
         "objective": objective,
         "provider": provider or "auto",
         "model": model_name or "claude-opus-4-6",
-    })
+    }
+    if config_overrides:
+        create_args["config"] = config_overrides
+    convex.mutation("sessions:create", create_args)
 
     # Launch investigation thread
     thread = threading.Thread(
         target=_run_investigation,
-        args=(session_id, objective, provider, model_name),
+        args=(session_id, objective, provider, model_name, config_overrides),
         daemon=True,
     )
     _running[session_id] = thread

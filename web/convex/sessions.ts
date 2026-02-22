@@ -73,9 +73,10 @@ export const create = mutation({
     objective: v.string(),
     provider: v.string(),
     model: v.string(),
+    config: v.optional(v.any()),
   },
   handler: async (ctx, args) => {
-    await ctx.db.insert("sessions", {
+    const doc: Record<string, any> = {
       sessionId: args.sessionId,
       objective: args.objective,
       provider: args.provider,
@@ -84,7 +85,11 @@ export const create = mutation({
       steps: 0,
       elapsed: 0,
       startedAt: Date.now(),
-    });
+    };
+    if (args.config !== undefined) {
+      doc.config = args.config;
+    }
+    await ctx.db.insert("sessions", doc as any);
   },
 });
 
