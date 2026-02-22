@@ -4,8 +4,7 @@ on:
   push:
     branches:
       - main
-      - claude/clone-openplanter-okhLY
-      - claude/fix-mobile-ux-ODDy7
+      - 'claude/**'
 
 jobs:
   deploy:
