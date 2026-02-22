@@ -14,7 +14,7 @@ const MODEL_OPTIONS = {
   auto: ["claude-opus-4-6", "gpt-5.2", "anthropic/claude-sonnet-4-5"],
   anthropic: ["claude-opus-4-6", "claude-sonnet-4-5-20250929", "claude-haiku-4-5-20251001"],
   openai: ["gpt-5.2", "gpt-4o", "gpt-4.1"],
-  openrouter: ["anthropic/claude-sonnet-4-5", "anthropic/claude-opus-4-6"],
+  openrouter: ["anthropic/claude-sonnet-4.6", "anthropic/claude-sonnet-4-5", "anthropic/claude-opus-4-6"],
   cerebras: ["qwen-3-235b-a22b-instruct-2507"],
 };
 
@@ -620,8 +620,8 @@ function AgentTuningTab({ config, setConfig, disabled }) {
 
 export default function InputBar({ onSubmit, onStop, isRunning, isStarting }) {
   const [objective, setObjective] = useState("");
-  const [provider, setProvider] = useState("auto");
-  const [model, setModel] = useState("claude-opus-4-6");
+  const [provider, setProvider] = useState("openrouter");
+  const [model, setModel] = useState("anthropic/claude-sonnet-4.6");
   const [showGuided, setShowGuided] = useState(false);
   const [activeTab, setActiveTab] = useState("build");
   const textareaRef = useRef(null);
@@ -642,7 +642,7 @@ export default function InputBar({ onSubmit, onStop, isRunning, isStarting }) {
   function handleProviderChange(e) {
     const p = e.target.value;
     setProvider(p);
-    setModel(MODEL_OPTIONS[p]?.[0] ?? "claude-opus-4-6");
+    setModel(MODEL_OPTIONS[p]?.[0] ?? "anthropic/claude-sonnet-4.6");
   }
 
   function handleSubmit() {
