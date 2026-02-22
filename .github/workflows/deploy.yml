@@ -1,0 +1,19 @@
+name: Deploy to Vercel
+
+on:
+  push:
+    branches:
+      - claude/clone-openplanter-okhLY
+      - claude/fix-mobile-ux-ODDy7
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Vercel
+        run: npx vercel --prod --token ${{ secrets.VERCEL_TOKEN }} --yes
+        env:
+          VERCEL_ORG_ID: team_A95PwohybkURtDfJ11UeJOxt
+          VERCEL_PROJECT_ID: prj_yniBsye1L055lMF4CjXY1bddWRCQ
