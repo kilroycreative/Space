@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "npx convex deploy --cmd 'npx vite build'",
+    "build": "vite build",
     "preview": "vite preview",
     "convex:dev": "convex dev",
     "convex:deploy": "convex deploy"
