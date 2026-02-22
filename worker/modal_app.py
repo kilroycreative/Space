@@ -1,109 +1,115 @@
-"""OpenPlanter Worker — Python backend that runs investigations
-and pushes real-time events to Convex.
+"""OpenPlanter Worker — Modal deployment.
 
-The Convex React frontend subscribes to real-time queries; this worker
-is the only process that writes to Convex via HTTP mutations.
+Each investigation runs in its own isolated container with configurable memory.
+The frontend POSTs to the Modal web endpoint; the function pushes real-time
+events to Convex via HTTP mutations (same as the Flask worker).
+
+Deploy:  modal deploy worker/modal_app.py
+Dev:     modal serve worker/modal_app.py
 """
 from __future__ import annotations
 
+import modal
+
+# ---------------------------------------------------------------------------
+# Modal app & container image
+# ---------------------------------------------------------------------------
+
+app = modal.App("openplanter-worker")
+
+image = (
+    modal.Image.debian_slim(python_version="3.11")
+    .apt_install("ripgrep", "git", "curl")
+    .pip_install("rich>=13.0", "prompt_toolkit>=3.0", "pyfiglet>=1.0")
+    .add_local_dir("agent", remote_path="/app/agent")
+    .add_local_file("pyproject.toml", remote_path="/app/pyproject.toml")
+    .run_commands("cd /app && pip install --no-cache-dir -e .", "mkdir -p /workspace")
+    .env({
+        "OPENPLANTER_WORKSPACE": "/workspace",
+    })
+)
+
+# Secrets injected at runtime via `modal secret create openplanter-secrets ...`
+secrets = [modal.Secret.from_name("openplanter-secrets")]
+
+# ---------------------------------------------------------------------------
+# Convex HTTP client (identical to the Flask worker version)
+# ---------------------------------------------------------------------------
+
 import json
-import os
 import sys
-import threading
-import time
 import urllib.request
 import urllib.error
-from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
 
-# Ensure parent dir is on path for agent imports
-_ROOT = Path(__file__).resolve().parent.parent
-if str(_ROOT) not in sys.path:
-    sys.path.insert(0, str(_ROOT))
-
-from flask import Flask, jsonify, request
-from flask_cors import CORS
-
-from agent.config import AgentConfig
-from agent.builder import build_engine, build_model_factory
-from agent.runtime import SessionRuntime, SessionStore
-
-# ---------------------------------------------------------------------------
-# Config
-# ---------------------------------------------------------------------------
-
-CONVEX_URL = os.environ.get("CONVEX_URL", "")  # e.g. https://your-project.convex.cloud
-CONVEX_DEPLOY_KEY = os.environ.get("CONVEX_DEPLOY_KEY", "")  # optional, for admin mutations
-WORKSPACE = Path(os.environ.get("OPENPLANTER_WORKSPACE", str(_ROOT))).resolve()
-
-app = Flask(__name__)
-CORS(app)
-
-_running: dict[str, threading.Thread] = {}
-
-
-# ---------------------------------------------------------------------------
-# Convex HTTP client — pushes mutations to the Convex backend
-# ---------------------------------------------------------------------------
 
 class ConvexClient:
     """Minimal HTTP client for calling Convex mutations."""
 
     def __init__(self, url: str):
-        # url should be the Convex deployment URL, e.g. https://foo.convex.cloud
         self.base = url.rstrip("/")
 
     def mutation(self, fn_name: str, args: dict[str, Any]) -> Any:
-        """Call a Convex mutation via the HTTP API."""
         if not self.base:
-            return None  # No Convex configured — events still run locally
-
+            return None
         url = f"{self.base}/api/mutation"
         payload = json.dumps({
             "path": fn_name,
             "args": args,
             "format": "json",
         }).encode("utf-8")
-
         req = urllib.request.Request(
-            url,
-            data=payload,
+            url, data=payload,
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-
         try:
             with urllib.request.urlopen(req, timeout=10) as resp:
                 return json.loads(resp.read().decode())
         except (urllib.error.URLError, OSError) as exc:
-            # Non-fatal — log and continue
             print(f"[convex] mutation {fn_name} failed: {exc}", file=sys.stderr)
             return None
 
 
-convex = ConvexClient(CONVEX_URL)
-
-
 # ---------------------------------------------------------------------------
-# Investigation runner
+# Investigation function — one container per investigation, 2 GB memory
 # ---------------------------------------------------------------------------
 
-def _run_investigation(
+@app.function(
+    image=image,
+    secrets=secrets,
+    memory=2048,
+    timeout=600,
+    retries=0,
+)
+def run_investigation(
     session_id: str,
     objective: str,
     provider: str,
     model_name: str,
+    convex_url: str,
     config_overrides: dict[str, Any] | None = None,
 ):
-    """Run an investigation in a background thread, pushing events to Convex."""
-    cfg = AgentConfig.from_env(WORKSPACE)
-    if provider and provider != "auto":
+    """Run a full investigation inside an isolated Modal container."""
+    import os
+    import time
+    from pathlib import Path
+
+    # Agent imports (available because we copied the agent/ directory into the image)
+    sys.path.insert(0, "/app")
+    from agent.config import AgentConfig
+    from agent.builder import build_engine, build_model_factory
+    from agent.runtime import SessionRuntime
+
+    convex = ConvexClient(convex_url)
+
+    cfg = AgentConfig.from_env(Path("/workspace"))
+    if provider and provider not in ("auto", ""):
         cfg.provider = provider
     if model_name:
         cfg.model = model_name
 
-    # Apply user-supplied config overrides from the guided settings panel
+    # Apply user-supplied config overrides
     if config_overrides:
         _allowed = {
             "recursive", "max_depth", "max_steps_per_call",
@@ -115,10 +121,11 @@ def _run_investigation(
                 try:
                     setattr(cfg, key, expected_type(value))
                 except (TypeError, ValueError):
-                    pass  # skip invalid values silently
+                    pass
 
-    # Verify we have API keys
-    if not any([cfg.openai_api_key, cfg.anthropic_api_key, cfg.openrouter_api_key, cfg.cerebras_api_key]):
+    # Verify API keys
+    if not any([cfg.openai_api_key, cfg.anthropic_api_key,
+                cfg.openrouter_api_key, cfg.cerebras_api_key]):
         convex.mutation("sessions:fail", {
             "sessionId": session_id,
             "error": "No API keys configured.",
@@ -130,9 +137,7 @@ def _run_investigation(
         engine = build_engine(cfg)
         engine.model_factory = build_model_factory(cfg)
         runtime = SessionRuntime.bootstrap(
-            engine=engine,
-            config=cfg,
-            session_id=session_id,
+            engine=engine, config=cfg, session_id=session_id,
         )
     except Exception as exc:
         convex.mutation("sessions:fail", {
@@ -142,32 +147,28 @@ def _run_investigation(
         })
         return
 
-    seq = [0]  # mutable counter for event sequencing
+    seq = [0]
     start_time = time.monotonic()
     step_count = [0]
-    event_buffer = []
-    buffer_lock = threading.Lock()
-    BUFFER_FLUSH_SIZE = 5  # batch events for efficiency
+    event_buffer: list[dict] = []
+    BUFFER_FLUSH_SIZE = 5
 
     def flush_buffer():
-        with buffer_lock:
-            if not event_buffer:
-                return
-            batch = list(event_buffer)
-            event_buffer.clear()
+        if not event_buffer:
+            return
+        batch = list(event_buffer)
+        event_buffer.clear()
         convex.mutation("sessions:pushEvents", {"events": batch})
 
     def on_event(msg: str):
         elapsed = round(time.monotonic() - start_time, 1)
         seq[0] += 1
-        evt = {
+        event_buffer.append({
             "sessionId": session_id,
             "type": "trace",
             "data": {"message": msg, "elapsed": elapsed},
             "seq": seq[0],
-        }
-        with buffer_lock:
-            event_buffer.append(evt)
+        })
         if len(event_buffer) >= BUFFER_FLUSH_SIZE:
             flush_buffer()
 
@@ -175,21 +176,17 @@ def _run_investigation(
         step_count[0] += 1
         elapsed = round(time.monotonic() - start_time, 1)
         seq[0] += 1
-
-        # Push step event
         step_data_clean = {
             k: v for k, v in step_data.items()
             if isinstance(v, (str, int, float, bool, list, dict, type(None)))
         }
-        flush_buffer()  # flush pending traces first
+        flush_buffer()
         convex.mutation("sessions:pushEvent", {
             "sessionId": session_id,
             "type": "step",
             "data": step_data_clean,
             "seq": seq[0],
         })
-
-        # Update session progress
         convex.mutation("sessions:updateProgress", {
             "sessionId": session_id,
             "steps": step_count[0],
@@ -228,91 +225,87 @@ def _run_investigation(
             "error": str(exc),
             "elapsed": elapsed,
         })
-    finally:
-        _running.pop(session_id, None)
 
 
 # ---------------------------------------------------------------------------
-# API endpoints
+# Web endpoints — drop-in replacements for the Flask routes
 # ---------------------------------------------------------------------------
 
-@app.route("/api/investigate", methods=["POST"])
-def start_investigation():
+@app.function(image=image, secrets=secrets)
+@modal.fastapi_endpoint(method="POST", docs=True)
+def investigate(data: dict):
     """Start a new investigation.
 
-    Body: { objective: str, provider?: str, model?: str }
+    Body: { objective: str, provider?: str, model?: str, config?: dict }
     Returns: { session_id: str }
     """
-    data = request.get_json(force=True)
+    import os
+    import secrets as _secrets
+    from datetime import datetime, timezone
+
     objective = (data.get("objective") or "").strip()
     if not objective:
-        return jsonify({"error": "No objective provided."}), 400
+        return {"error": "No objective provided."}, 400
 
-    provider = data.get("provider", "auto")
+    provider = data.get("provider", "")
     model_name = data.get("model", "")
-    config_overrides = data.get("config")  # optional dict of agent config overrides
+    config_overrides = data.get("config")
+    convex_url = os.environ.get("CONVEX_URL", "")
 
     # Generate session ID
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-    import secrets
-    session_id = f"{stamp}-{secrets.token_hex(3)}"
+    session_id = f"{stamp}-{_secrets.token_hex(3)}"
 
     # Create session in Convex
-    create_args: dict[str, Any] = {
+    convex = ConvexClient(convex_url)
+    convex.mutation("sessions:create", {
         "sessionId": session_id,
         "objective": objective,
-        "provider": provider or "auto",
+        "provider": provider or "openrouter",
         "model": model_name or "anthropic/claude-sonnet-4.6",
-    }
-    if config_overrides:
-        create_args["config"] = config_overrides
-    convex.mutation("sessions:create", create_args)
+        **({"config": config_overrides} if config_overrides else {}),
+    })
 
-    # Launch investigation thread
-    thread = threading.Thread(
-        target=_run_investigation,
-        args=(session_id, objective, provider, model_name, config_overrides),
-        daemon=True,
+    # Spawn investigation in a separate container (returns immediately)
+    run_investigation.spawn(
+        session_id=session_id,
+        objective=objective,
+        provider=provider,
+        model_name=model_name,
+        convex_url=convex_url,
+        config_overrides=config_overrides,
     )
-    _running[session_id] = thread
-    thread.start()
 
-    return jsonify({"session_id": session_id})
+    return {"session_id": session_id}
 
 
-@app.route("/api/investigate/<session_id>/stop", methods=["POST"])
-def stop_investigation(session_id: str):
-    """Best-effort stop."""
-    _running.pop(session_id, None)
+@app.function(image=image, secrets=secrets)
+@modal.fastapi_endpoint(method="POST", docs=True)
+def stop(data: dict):
+    """Best-effort stop (marks session as failed in Convex)."""
+    import os
+
+    session_id = data.get("session_id", "")
+    if not session_id:
+        return {"error": "No session_id provided."}, 400
+
+    convex_url = os.environ.get("CONVEX_URL", "")
+    convex = ConvexClient(convex_url)
     convex.mutation("sessions:fail", {
         "sessionId": session_id,
         "error": "Stopped by user.",
         "elapsed": 0,
     })
-    return jsonify({"status": "stopped"})
+    return {"status": "stopped"}
 
 
-@app.route("/api/health", methods=["GET"])
+@app.function(image=image, secrets=secrets)
+@modal.fastapi_endpoint(method="GET", docs=True)
 def health():
-    return jsonify({
+    """Health check."""
+    import os
+    return {
         "status": "ok",
-        "workspace": str(WORKSPACE),
-        "convex_configured": bool(CONVEX_URL),
-        "running_investigations": len(_running),
-    })
-
-
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
-
-if __name__ == "__main__":
-    port = int(os.environ.get("WORKER_PORT", "5001"))
-    host = os.environ.get("WORKER_HOST", "0.0.0.0")
-
-    print(f"\n  OpenPlanter Worker")
-    print(f"  http://{host}:{port}")
-    print(f"  Workspace: {WORKSPACE}")
-    print(f"  Convex: {CONVEX_URL or '(not configured — local only)'}\n")
-
-    app.run(host=host, port=port, debug=False)
+        "runtime": "modal",
+        "convex_configured": bool(os.environ.get("CONVEX_URL")),
+    }
