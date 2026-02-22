@@ -57,6 +57,9 @@ _MODEL_CONTEXT_WINDOWS: dict[str, int] = {
     "claude-opus-4-6": 200_000,
     "claude-sonnet-4-5-20250929": 200_000,
     "claude-haiku-4-5-20251001": 200_000,
+    "anthropic/claude-sonnet-4.6": 200_000,
+    "anthropic/claude-sonnet-4-5": 200_000,
+    "anthropic/claude-haiku-4-5-20251001": 200_000,
     "gpt-4o": 128_000,
     "gpt-4.1": 1_000_000,
     "gpt-5-turbo-16k": 16_000,
@@ -91,9 +94,15 @@ def _lowest_tier_model(model_name: str) -> tuple[str, str | None]:
     """Return (model_name, reasoning_effort) for the lowest-tier executor.
 
     Anthropic models → haiku.  Unknown → no downgrade (return same name).
+    OpenRouter models (containing "/") return the OpenRouter haiku ID so
+    that the model factory routes through OpenRouter rather than requiring
+    a direct Anthropic API key.
     """
     lower = model_name.lower()
     if "claude" in lower:
+        if "/" in model_name:
+            # OpenRouter model ID — return OpenRouter-compatible haiku
+            return ("anthropic/claude-haiku-4-5-20251001", None)
         return ("claude-haiku-4-5-20251001", None)
     return (model_name, None)
 

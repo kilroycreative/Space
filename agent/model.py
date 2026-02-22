@@ -572,6 +572,7 @@ class OpenAICompatibleModel:
     base_url: str = "https://api.openai.com/v1"
     temperature: float = 0.0
     reasoning_effort: str | None = None
+    max_tokens: int = 16384
     timeout_sec: int = 300
     extra_headers: dict[str, str] = field(default_factory=dict)
     strict_tools: bool = True
@@ -610,6 +611,14 @@ class OpenAICompatibleModel:
             "stream": True,
             "stream_options": {"include_usage": True},
         }
+
+        # Set output token limit. Reasoning models use max_completion_tokens;
+        # standard models use max_tokens.  This is critical for providers like
+        # OpenRouter that pre-check credit limits against the requested max.
+        if is_reasoning:
+            payload["max_completion_tokens"] = self.max_tokens
+        else:
+            payload["max_tokens"] = self.max_tokens
 
         if conversation.stop_sequences:
             payload["stop"] = conversation.stop_sequences

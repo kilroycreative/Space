@@ -78,8 +78,6 @@ def _fetch_models_for_provider(cfg: AgentConfig, provider: str) -> list[dict]:
 
 def _resolve_model_name(cfg: AgentConfig) -> str:
     selected = (cfg.model or "").strip()
-    if selected and selected.lower() != "newest":
-        return selected
     if selected and selected.lower() == "newest":
         try:
             models = _fetch_models_for_provider(cfg, cfg.provider)
@@ -88,6 +86,17 @@ def _resolve_model_name(cfg: AgentConfig) -> str:
         if not models:
             raise ModelError(f"No models returned for provider '{cfg.provider}'.")
         return str(models[0]["id"])
+    if selected:
+        # OpenRouter model IDs always contain a "/" (e.g. "anthropic/claude-sonnet-4.6").
+        # If the provider is OpenRouter but the selected model lacks "/", it was
+        # likely set as a direct-provider model name (e.g. "claude-opus-4-6").
+        # Fall back to the OpenRouter provider default to avoid sending an
+        # unrecognised or overly-expensive model ID.
+        if cfg.provider == "openrouter" and "/" not in selected:
+            provider_default = PROVIDER_DEFAULT_MODELS.get("openrouter")
+            if provider_default:
+                return provider_default
+        return selected
     return PROVIDER_DEFAULT_MODELS.get(cfg.provider, "claude-opus-4-6")
 
 
