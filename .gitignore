@@ -52,3 +52,5 @@ Thumbs.db
 /data/*.json
 /data/ghost-threads/
 /data/echoes/ 
+# Vercel
+.vercel
