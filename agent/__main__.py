@@ -148,15 +148,15 @@ def _resolve_provider(requested: str, creds: CredentialBundle) -> str:
         return requested
     if requested == "all":
         return "all"
-    if creds.openai_api_key:
-        return "openai"
-    if creds.anthropic_api_key:
-        return "anthropic"
     if creds.openrouter_api_key:
         return "openrouter"
+    if creds.anthropic_api_key:
+        return "anthropic"
+    if creds.openai_api_key:
+        return "openai"
     if creds.cerebras_api_key:
         return "cerebras"
-    return "openai"
+    return "openrouter"
 
 
 def _print_models(cfg: AgentConfig, requested_provider: str) -> int:

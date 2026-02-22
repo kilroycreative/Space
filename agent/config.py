@@ -15,8 +15,8 @@ PROVIDER_DEFAULT_MODELS: dict[str, str] = {
 @dataclass(slots=True)
 class AgentConfig:
     workspace: Path
-    provider: str = "auto"
-    model: str = "claude-opus-4-6"
+    provider: str = "openrouter"
+    model: str = "anthropic/claude-sonnet-4.6"
     reasoning_effort: str | None = "high"
     base_url: str = "https://api.openai.com/v1"  # Legacy alias for OpenAI-compatible base URL.
     api_key: str | None = None  # Legacy alias for OpenAI key.
@@ -67,8 +67,8 @@ class AgentConfig:
         )
         return cls(
             workspace=ws,
-            provider=os.getenv("OPENPLANTER_PROVIDER", "auto").strip().lower() or "auto",
-            model=os.getenv("OPENPLANTER_MODEL", "claude-opus-4-6"),
+            provider=os.getenv("OPENPLANTER_PROVIDER", "openrouter").strip().lower() or "openrouter",
+            model=os.getenv("OPENPLANTER_MODEL", "anthropic/claude-sonnet-4.6"),
             reasoning_effort=(os.getenv("OPENPLANTER_REASONING_EFFORT", "high").strip().lower() or None),
             base_url=openai_base_url,
             api_key=openai_api_key,

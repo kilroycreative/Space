@@ -161,8 +161,8 @@ class AgentConfigFromEnvTests(unittest.TestCase):
     def test_defaults_from_clean_env(self) -> None:
         with patch.dict(os.environ, {}, clear=True):
             cfg = AgentConfig.from_env("/tmp/test-ws")
-        self.assertEqual(cfg.provider, "auto")
-        self.assertEqual(cfg.model, "claude-opus-4-6")
+        self.assertEqual(cfg.provider, "openrouter")
+        self.assertEqual(cfg.model, "anthropic/claude-sonnet-4.6")
         self.assertEqual(cfg.reasoning_effort, "high")
         self.assertEqual(cfg.max_depth, 4)
         self.assertEqual(cfg.max_steps_per_call, 100)
@@ -283,7 +283,7 @@ class ResolveModelNameTests(unittest.TestCase):
     def test_unknown_provider_fallback(self) -> None:
         cfg = AgentConfig(workspace=Path("/tmp"), provider="custom", model="")
         result = _resolve_model_name(cfg)
-        self.assertEqual(result, "claude-opus-4-6")
+        self.assertEqual(result, "anthropic/claude-sonnet-4.6")
 
     def test_newest_without_key_raises(self) -> None:
         cfg = AgentConfig(workspace=Path("/tmp"), provider="openai", model="newest")

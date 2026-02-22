@@ -97,7 +97,7 @@ def _resolve_model_name(cfg: AgentConfig) -> str:
             if provider_default:
                 return provider_default
         return selected
-    return PROVIDER_DEFAULT_MODELS.get(cfg.provider, "claude-opus-4-6")
+    return PROVIDER_DEFAULT_MODELS.get(cfg.provider, "anthropic/claude-sonnet-4.6")
 
 
 def build_model_factory(cfg: AgentConfig) -> ModelFactory | None:
