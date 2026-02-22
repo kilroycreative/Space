@@ -205,61 +205,89 @@ def run_investigation(
 # so they only execute inside the Modal container, not locally
 # ---------------------------------------------------------------------------
 
+async def _send_json(send, status: int, data: dict):
+    body = json.dumps(data).encode()
+    await send({"type": "http.response.start", "status": status,
+                "headers": [[b"content-type", b"application/json"],
+                             [b"access-control-allow-origin", b"*"],
+                             [b"access-control-allow-headers", b"*"],
+                             [b"content-length", str(len(body)).encode()]]})
+    await send({"type": "http.response.body", "body": body})
+
+
+async def _read_body(receive) -> bytes:
+    body = b""
+    while True:
+        event = await receive()
+        body += event.get("body", b"")
+        if not event.get("more_body", False):
+            break
+    return body
+
+
 @app.function(image=image, secrets=[secret])
 @modal.asgi_app()
 def fastapi_handler():
     import secrets as _secrets
-    from fastapi import FastAPI, HTTPException
-    from fastapi.middleware.cors import CORSMiddleware
-    from pydantic import BaseModel
+    import re
 
-    web_app = FastAPI()
-    web_app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    STOP_RE = re.compile(r"^/api/investigate/([^/]+)/stop$")
 
-    class InvestigateRequest(BaseModel):
-        objective: str
-        provider: str = "openrouter"
-        model: str = "anthropic/claude-sonnet-4.6"
-        config: dict | None = None
+    async def asgi_app(scope, receive, send):
+        if scope["type"] == "http":
+            method = scope.get("method", "").upper()
+            path = scope.get("path", "")
 
-    @web_app.post("/api/investigate")
-    async def investigate(body: InvestigateRequest):
-        objective = body.objective.strip()
-        if not objective:
-            raise HTTPException(status_code=400, detail="No objective provided.")
+            # CORS preflight
+            if method == "OPTIONS":
+                await send({"type": "http.response.start", "status": 200,
+                            "headers": [[b"access-control-allow-origin", b"*"],
+                                        [b"access-control-allow-methods", b"POST, GET, OPTIONS"],
+                                        [b"access-control-allow-headers", b"*"]]})
+                await send({"type": "http.response.body", "body": b""})
+                return
 
-        stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-        session_id = f"{stamp}-{_secrets.token_hex(3)}"
+            if method == "GET" and path == "/api/health":
+                await _send_json(send, 200, {"status": "ok", "runtime": "modal"})
+                return
 
-        convex = ConvexClient(os.environ.get("CONVEX_URL", ""))
-        create_args: dict[str, Any] = {
-            "sessionId": session_id,
-            "objective": objective,
-            "provider": body.provider,
-            "model": body.model,
-        }
-        if body.config:
-            create_args["config"] = body.config
-        convex.mutation("sessions:create", create_args)
+            if method == "POST" and path == "/api/investigate":
+                raw = await _read_body(receive)
+                data = json.loads(raw) if raw else {}
+                objective = (data.get("objective") or "").strip()
+                if not objective:
+                    await _send_json(send, 400, {"error": "No objective provided."})
+                    return
 
-        run_investigation.spawn(session_id, objective, body.provider, body.model, body.config)
-        return {"session_id": session_id}
+                provider = data.get("provider", "openrouter")
+                model_name = data.get("model", "anthropic/claude-sonnet-4.6")
+                config_overrides = data.get("config")
 
-    @web_app.post("/api/investigate/{session_id}/stop")
-    async def stop(session_id: str):
-        convex = ConvexClient(os.environ.get("CONVEX_URL", ""))
-        convex.mutation("sessions:fail", {
-            "sessionId": session_id, "error": "Stopped by user.", "elapsed": 0,
-        })
-        return {"status": "stopped"}
+                stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+                session_id = f"{stamp}-{_secrets.token_hex(3)}"
 
-    @web_app.get("/api/health")
-    async def health():
-        return {"status": "ok", "runtime": "modal"}
+                convex = ConvexClient(os.environ.get("CONVEX_URL", ""))
+                create_args: dict[str, Any] = {
+                    "sessionId": session_id, "objective": objective,
+                    "provider": provider, "model": model_name,
+                }
+                if config_overrides:
+                    create_args["config"] = config_overrides
+                convex.mutation("sessions:create", create_args)
+                run_investigation.spawn(session_id, objective, provider, model_name, config_overrides)
+                await _send_json(send, 200, {"session_id": session_id})
+                return
 
-    return web_app
+            m = STOP_RE.match(path)
+            if m and method == "POST":
+                session_id = m.group(1)
+                convex = ConvexClient(os.environ.get("CONVEX_URL", ""))
+                convex.mutation("sessions:fail", {
+                    "sessionId": session_id, "error": "Stopped by user.", "elapsed": 0,
+                })
+                await _send_json(send, 200, {"status": "stopped"})
+                return
+
+            await _send_json(send, 404, {"error": "Not found"})
+
+    return asgi_app
