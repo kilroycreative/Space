@@ -599,12 +599,212 @@ html, body {
     mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
 }
 
-/* Responsive */
+/* Responsive — Tablet & Mobile */
 @media (max-width: 768px) {
     .main {
         grid-template-columns: 1fr;
     }
+
     .sidebar {
         display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 85%;
+        max-width: 320px;
+        z-index: 200;
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+    }
+
+    .sidebar.open {
+        display: flex;
+    }
+
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 199;
+    }
+
+    .sidebar-overlay.open {
+        display: block;
+    }
+
+    .header {
+        padding: 0 12px;
+    }
+
+    .header-badge {
+        display: none;
+    }
+
+    .header-right {
+        gap: 8px;
+    }
+
+    .token-counter {
+        display: none;
+    }
+
+    .menu-btn {
+        display: flex;
+    }
+
+    .input-area {
+        padding: 12px;
+    }
+
+    .input-row {
+        gap: 8px;
+    }
+
+    .objective-input {
+        padding: 10px 12px;
+    }
+
+    .btn {
+        padding: 10px 14px;
+    }
+
+    .btn svg + span {
+        display: none;
+    }
+
+    .config-bar {
+        gap: 8px;
+    }
+
+    .config-bar .config-select {
+        flex: 1;
+    }
+
+    .feed {
+        padding: 12px;
+    }
+
+    .feed-empty {
+        padding: 24px 16px;
+    }
+
+    .feed-empty h2 {
+        font-size: 16px;
+    }
+
+    .feed-empty p {
+        font-size: 13px;
+    }
+
+    .step-card {
+        padding: 10px 12px;
+    }
+
+    .step-card-header {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .step-tool-name {
+        font-size: 12px;
+    }
+
+    .result-card {
+        padding: 14px;
+    }
+
+    .error-card {
+        padding: 12px;
+    }
+
+    .sidebar-mobile-header {
+        display: flex;
+    }
+}
+
+@media (min-width: 769px) {
+    .menu-btn,
+    .sidebar-overlay,
+    .sidebar-mobile-header {
+        display: none;
+    }
+}
+
+/* Hamburger menu button */
+.menu-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.menu-btn:hover {
+    color: var(--text-primary);
+}
+
+/* Sidebar mobile header */
+.sidebar-mobile-header {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.sidebar-mobile-header h3 {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.sidebar-close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.sidebar-close-btn:hover {
+    color: var(--text-primary);
+}
+
+/* Small mobile */
+@media (max-width: 480px) {
+    html, body {
+        font-size: 13px;
+    }
+
+    .logo {
+        font-size: 14px;
+    }
+
+    .objective-input {
+        font-size: 14px;
+    }
+
+    .config-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .feed-empty .btn {
+        font-size: 12px;
+        padding: 6px 10px;
     }
 }

@@ -1,36 +1,46 @@
 import React, { forwardRef, useState } from "react";
 
-const Feed = forwardRef(function Feed({ events, session }, ref) {
+const Feed = forwardRef(function Feed({ events, session, isMobile }, ref) {
+  const feedStyle = isMobile
+    ? { ...styles.feed, padding: "12px" }
+    : styles.feed;
+
   if (!session && events.length === 0) {
     return (
-      <div ref={ref} style={styles.feed}>
-        <EmptyState />
+      <div ref={ref} style={feedStyle}>
+        <EmptyState isMobile={isMobile} />
       </div>
     );
   }
 
+  const objectiveCardStyle = isMobile
+    ? { ...styles.objectiveCard, flexWrap: "wrap", padding: "10px 12px" }
+    : styles.objectiveCard;
+
   return (
-    <div ref={ref} style={styles.feed}>
+    <div ref={ref} style={feedStyle}>
       {session && (
-        <div style={styles.objectiveCard}>
+        <div style={objectiveCardStyle}>
           <span style={styles.badge("var(--yellow-dim)", "var(--yellow)")}>
             Investigation
           </span>
-          <span style={styles.objectiveText}>{session.objective}</span>
+          <span style={isMobile ? { ...styles.objectiveText, fontSize: 12 } : styles.objectiveText}>
+            {session.objective}
+          </span>
           <span style={styles.meta}>{session.provider}/{session.model}</span>
         </div>
       )}
 
       {events.map((evt) => (
-        <EventItem key={evt._id} event={evt} />
+        <EventItem key={evt._id} event={evt} isMobile={isMobile} />
       ))}
 
       {session?.status === "completed" && session.result && (
-        <ResultCard result={session.result} session={session} />
+        <ResultCard result={session.result} session={session} isMobile={isMobile} />
       )}
 
       {session?.status === "error" && session.error && (
-        <div style={styles.errorCard}>
+        <div style={isMobile ? { ...styles.errorCard, padding: 12 } : styles.errorCard}>
           <div style={styles.errorMessage}>{session.error}</div>
         </div>
       )}
@@ -40,11 +50,11 @@ const Feed = forwardRef(function Feed({ events, session }, ref) {
 
 export default Feed;
 
-function EventItem({ event }) {
+function EventItem({ event, isMobile }) {
   const { type, data } = event;
 
   if (type === "step") {
-    return <StepCard data={data} />;
+    return <StepCard data={data} isMobile={isMobile} />;
   }
 
   if (type === "trace") {
@@ -69,7 +79,7 @@ function EventItem({ event }) {
   return null;
 }
 
-function StepCard({ data }) {
+function StepCard({ data, isMobile }) {
   const [expanded, setExpanded] = useState(false);
   const action = data.action || {};
   const name = action.name || "unknown";
@@ -89,15 +99,24 @@ function StepCard({ data }) {
   else if (name === "subtask" || name === "execute") summary = args.objective || "";
   else if (name === "think") summary = (args.note || "").slice(0, 120);
 
+  const truncLen = isMobile ? 40 : 80;
   const preview = observation.slice(0, 400);
   const hasMore = observation.length > 400;
 
+  const stepCardStyle = isMobile
+    ? { ...styles.stepCard, padding: "10px 12px" }
+    : styles.stepCard;
+
+  const stepHeaderStyle = isMobile
+    ? { ...styles.stepHeader, flexWrap: "wrap", gap: 6 }
+    : styles.stepHeader;
+
   return (
-    <div style={styles.stepCard}>
-      <div style={styles.stepHeader}>
+    <div style={stepCardStyle}>
+      <div style={stepHeaderStyle}>
         <span style={styles.badge(badgeColor.bg, badgeColor.fg)}>{label}</span>
         {summary && (
-          <span style={styles.stepToolName}>{truncate(summary, 80)}</span>
+          <span style={styles.stepToolName}>{truncate(summary, truncLen)}</span>
         )}
         <span style={styles.meta}>
           d{data.depth ?? 0}/s{data.step ?? 0}
@@ -107,7 +126,7 @@ function StepCard({ data }) {
       {observation && (
         <div style={{
           ...styles.stepBody,
-          maxHeight: expanded ? "none" : 200,
+          maxHeight: expanded ? "none" : (isMobile ? 150 : 200),
         }}>
           {expanded ? observation : preview + (hasMore ? "..." : "")}
         </div>
@@ -121,9 +140,9 @@ function StepCard({ data }) {
   );
 }
 
-function ResultCard({ result, session }) {
+function ResultCard({ result, session, isMobile }) {
   return (
-    <div style={styles.resultCard}>
+    <div style={isMobile ? { ...styles.resultCard, padding: 14 } : styles.resultCard}>
       <h3 style={styles.resultTitle}>Investigation Complete</h3>
       <div style={styles.resultBody}>{result}</div>
       <div style={styles.resultStats}>
@@ -134,13 +153,13 @@ function ResultCard({ result, session }) {
   );
 }
 
-function EmptyState() {
+function EmptyState({ isMobile }) {
   return (
-    <div style={styles.empty}>
-      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" style={{ opacity: 0.3 }}>
+    <div style={isMobile ? { ...styles.empty, padding: 24 } : styles.empty}>
+      <svg width={isMobile ? "48" : "64"} height={isMobile ? "48" : "64"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" style={{ opacity: 0.3 }}>
         <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
       </svg>
-      <h2 style={styles.emptyTitle}>Ready to Investigate</h2>
+      <h2 style={isMobile ? { ...styles.emptyTitle, fontSize: 16 } : styles.emptyTitle}>Ready to Investigate</h2>
       <p style={styles.emptyText}>
         Enter an investigation objective above. OpenPlanter will autonomously
         analyze datasets, resolve entities, and surface non-obvious connections.
@@ -183,6 +202,8 @@ const styles = {
     fontSize: 13,
     fontWeight: 600,
     flex: 1,
+    minWidth: 0,
+    wordBreak: "break-word",
   },
   badge: (bg, fg) => ({
     fontFamily: "var(--font-mono)",
@@ -195,12 +216,14 @@ const styles = {
     background: bg,
     color: fg,
     whiteSpace: "nowrap",
+    flexShrink: 0,
   }),
   meta: {
     fontSize: 11,
     color: "var(--text-muted)",
     marginLeft: "auto",
     whiteSpace: "nowrap",
+    flexShrink: 0,
   },
   traceItem: {
     padding: "6px 12px",
@@ -209,6 +232,7 @@ const styles = {
     fontSize: 12,
     color: "var(--text-muted)",
     animation: "fadeIn 200ms ease",
+    wordBreak: "break-word",
   },
   traceTime: { color: "var(--text-muted)", marginRight: 8, fontSize: 11 },
   deltaItem: {
@@ -256,6 +280,7 @@ const styles = {
     color: "var(--accent)",
     cursor: "pointer",
     marginTop: 4,
+    padding: "4px 0",
   },
   resultCard: {
     background: "var(--bg-card)",
@@ -301,6 +326,7 @@ const styles = {
     fontSize: 13,
     color: "var(--red)",
     whiteSpace: "pre-wrap",
+    wordBreak: "break-word",
   },
   empty: {
     display: "flex",

@@ -118,4 +118,43 @@
 
 .trace-container::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
-} 
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .trace-container {
+    width: 95%;
+    padding: 1.25rem;
+    border-radius: 8px;
+  }
+
+  .trace-header {
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .trace-header h3 {
+    font-size: 1.2rem;
+  }
+
+  .close-button {
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .trace-timeline {
+    padding-left: 1rem;
+  }
+
+  .trace-echo {
+    margin-bottom: 1.25rem;
+    padding-left: 1rem;
+  }
+
+  .trace-content {
+    padding: 1rem;
+  }
+}

@@ -23,6 +23,12 @@ const EchoesContainer = styled.div`
   background: rgba(255, 255, 255, 0.02);
   border-radius: 12px;
   backdrop-filter: blur(10px);
+
+  @media (max-width: 768px) {
+    padding: 1rem;
+    border-radius: 8px;
+    min-height: 150px;
+  }
 `;
 
 const EchoGrid = styled.div`
@@ -30,6 +36,12 @@ const EchoGrid = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 2rem;
   margin-top: 2rem;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
 `;
 
 const Echo = styled(motion.div)`
@@ -45,7 +57,7 @@ const Echo = styled(motion.div)`
   &:hover {
     background: ${props => props.emotionColor ? `rgba(255, 255, 255, 0.08)` : 'rgba(255, 255, 255, 0.05)'};
     transform: translateY(-2px);
-    
+
     ${EchoTrace} {
       opacity: 1;
     }
@@ -59,6 +71,10 @@ const Echo = styled(motion.div)`
     width: 4px;
     height: 100%;
     background: ${props => props.emotionColor ? props.emotionColor.replace('0.15', '0.5') : 'transparent'};
+  }
+
+  @media (max-width: 768px) {
+    padding: 1rem;
   }
 `;
 

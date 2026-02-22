@@ -16,9 +16,16 @@ const SilenceContainer = styled(motion.div)`
   justify-content: center;
   cursor: pointer;
   transition: all 0.3s ease;
+  -webkit-tap-highlight-color: transparent;
 
   &:hover {
     background: rgba(255, 255, 255, 0.02);
+  }
+
+  @media (max-width: 768px) {
+    padding: 1rem;
+    min-height: 80px;
+    border-radius: 8px;
   }
 `;
 
@@ -114,7 +121,7 @@ const Silence = () => {
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.5 }}
         >
-          {isRecording ? 'Recording silence...' : response || 'Click to embrace the silence'}
+          {isRecording ? 'Recording silence...' : response || (window.innerWidth <= 768 ? 'Tap to embrace the silence' : 'Click to embrace the silence')}
         </SilenceText>
       </AnimatePresence>
 

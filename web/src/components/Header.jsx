@@ -1,24 +1,37 @@
 import React from "react";
 
-export default function Header({ session, isRunning }) {
+export default function Header({ session, isRunning, isMobile, onToggleSidebar }) {
   const steps = session?.steps ?? 0;
   const elapsed = session?.elapsed ?? 0;
 
   return (
     <header style={styles.header}>
       <div style={styles.left}>
+        {isMobile && (
+          <button style={styles.menuBtn} onClick={onToggleSidebar} aria-label="Toggle sidebar">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+        )}
         <div style={styles.logo}>
           Open<span style={{ color: "var(--accent)" }}>Planter</span>
         </div>
-        <div style={styles.badge}>Dashboard</div>
+        {!isMobile && <div style={styles.badge}>Dashboard</div>}
       </div>
-      <div style={styles.right}>
-        <div style={styles.counter}>
-          Steps: <strong>{steps}</strong>
-        </div>
-        <div style={styles.counter}>
-          Elapsed: <strong>{formatElapsed(elapsed)}</strong>
-        </div>
+      <div style={isMobile ? styles.rightMobile : styles.right}>
+        {!isMobile && (
+          <div style={styles.counter}>
+            Steps: <strong>{steps}</strong>
+          </div>
+        )}
+        {!isMobile && (
+          <div style={styles.counter}>
+            Elapsed: <strong>{formatElapsed(elapsed)}</strong>
+          </div>
+        )}
         <div style={styles.status}>
           <div
             style={{
@@ -52,12 +65,13 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "0 24px",
+    padding: "0 16px",
     background: "var(--bg-secondary)",
     borderBottom: "1px solid var(--border)",
     zIndex: 100,
+    minHeight: 56,
   },
-  left: { display: "flex", alignItems: "center", gap: 12 },
+  left: { display: "flex", alignItems: "center", gap: 10 },
   logo: {
     fontFamily: "var(--font-mono)",
     fontSize: 16,
@@ -75,7 +89,20 @@ const styles = {
     color: "var(--accent)",
     border: "1px solid rgba(59,130,246,0.3)",
   },
+  menuBtn: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "none",
+    border: "none",
+    color: "var(--text-secondary)",
+    cursor: "pointer",
+    padding: 6,
+    borderRadius: 6,
+    WebkitTapHighlightColor: "transparent",
+  },
   right: { display: "flex", alignItems: "center", gap: 16 },
+  rightMobile: { display: "flex", alignItems: "center", gap: 8 },
   counter: {
     fontFamily: "var(--font-mono)",
     fontSize: 11,

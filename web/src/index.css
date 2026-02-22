@@ -61,3 +61,16 @@ html, body, #root {
   0% { left: -50%; }
   100% { left: 100%; }
 }
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  html, body, #root {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  html, body, #root {
+    font-size: 12px;
+  }
+}
