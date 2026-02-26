@@ -12,7 +12,7 @@ const EXAMPLES = [
 
 const MODEL_OPTIONS = {
   auto: ["claude-opus-4-6", "gpt-5.2", "anthropic/claude-sonnet-4-5"],
-  anthropic: ["claude-opus-4-6", "claude-sonnet-4-6", "claude-sonnet-4-5-20250929", "claude-haiku-4-5-20251001"],
+  anthropic: ["claude-sonnet-4-6", "claude-opus-4-6", "claude-sonnet-4-5-20250929", "claude-haiku-4-5-20251001"],
   openai: ["gpt-5.2", "gpt-4o", "gpt-4.1"],
   openrouter: ["anthropic/claude-sonnet-4.6", "anthropic/claude-sonnet-4-5", "anthropic/claude-opus-4-6"],
   cerebras: ["qwen-3-235b-a22b-instruct-2507"],

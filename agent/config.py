@@ -6,7 +6,7 @@ from pathlib import Path
 
 PROVIDER_DEFAULT_MODELS: dict[str, str] = {
     "openai": "gpt-5.2",
-    "anthropic": "claude-opus-4-6",
+    "anthropic": "claude-sonnet-4-6",
     "openrouter": "anthropic/claude-sonnet-4.6",
     "cerebras": "qwen-3-235b-a22b-instruct-2507",
 }
