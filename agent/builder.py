@@ -62,9 +62,9 @@ def _fetch_models_for_provider(cfg: AgentConfig, provider: str) -> list[dict]:
             raise ModelError("OpenAI key not configured.")
         return list_openai_models(api_key=cfg.openai_api_key, base_url=cfg.openai_base_url)
     if provider == "anthropic":
-        if not cfg.anthropic_api_key:
+        if not cfg.anthropic_api_key and not cfg.anthropic_auth_token:
             raise ModelError("Anthropic key not configured.")
-        return list_anthropic_models(api_key=cfg.anthropic_api_key, base_url=cfg.anthropic_base_url)
+        return list_anthropic_models(api_key=cfg.anthropic_api_key or cfg.anthropic_auth_token, base_url=cfg.anthropic_base_url)
     if provider == "openrouter":
         if not cfg.openrouter_api_key:
             raise ModelError("OpenRouter key not configured.")
@@ -105,10 +105,11 @@ def build_model_factory(cfg: AgentConfig) -> ModelFactory | None:
     def _factory(model_name: str, reasoning_effort: str | None = None) -> AnthropicModel | OpenAICompatibleModel:
         provider = infer_provider_for_model(model_name)
         effort = reasoning_effort or cfg.reasoning_effort
-        if provider == "anthropic" and cfg.anthropic_api_key:
+        if provider == "anthropic" and (cfg.anthropic_api_key or cfg.anthropic_auth_token):
             return AnthropicModel(
                 model=model_name,
                 api_key=cfg.anthropic_api_key,
+                auth_token=cfg.anthropic_auth_token,
                 base_url=cfg.anthropic_base_url,
                 reasoning_effort=effort,
             )
@@ -139,7 +140,7 @@ def build_model_factory(cfg: AgentConfig) -> ModelFactory | None:
             )
         raise ModelError(f"No API key available for model '{model_name}' (provider={provider})")
 
-    if cfg.anthropic_api_key or cfg.openai_api_key or cfg.openrouter_api_key or cfg.cerebras_api_key:
+    if cfg.anthropic_api_key or cfg.anthropic_auth_token or cfg.openai_api_key or cfg.openrouter_api_key or cfg.cerebras_api_key:
         return _factory
     return None
 
@@ -190,10 +191,11 @@ def build_engine(cfg: AgentConfig) -> RLMEngine:
             base_url=cfg.cerebras_base_url,
             reasoning_effort=cfg.reasoning_effort,
         )
-    elif cfg.provider == "anthropic" and cfg.anthropic_api_key:
+    elif cfg.provider == "anthropic" and (cfg.anthropic_api_key or cfg.anthropic_auth_token):
         model = AnthropicModel(
             model=model_name,
             api_key=cfg.anthropic_api_key,
+            auth_token=cfg.anthropic_auth_token,
             base_url=cfg.anthropic_base_url,
             reasoning_effort=cfg.reasoning_effort,
         )

@@ -116,7 +116,7 @@ def run_investigation(
                 except (TypeError, ValueError):
                     pass
 
-    if not any([cfg.openai_api_key, cfg.anthropic_api_key,
+    if not any([cfg.openai_api_key, cfg.anthropic_api_key, cfg.anthropic_auth_token,
                 cfg.openrouter_api_key, cfg.cerebras_api_key]):
         convex.mutation("sessions:fail", {
             "sessionId": session_id, "error": "No API keys configured.", "elapsed": 0,

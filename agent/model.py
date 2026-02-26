@@ -772,7 +772,8 @@ class OpenAICompatibleModel:
 @dataclass
 class AnthropicModel:
     model: str
-    api_key: str
+    api_key: str | None = None
+    auth_token: str | None = None
     base_url: str = "https://api.anthropic.com/v1"
     temperature: float = 0.0
     reasoning_effort: str | None = None
@@ -823,11 +824,14 @@ class AnthropicModel:
             payload["system"] = conversation.system_prompt
 
         url = self.base_url.rstrip("/") + "/messages"
-        headers = {
-            "x-api-key": self.api_key,
+        headers: dict[str, str] = {
             "anthropic-version": "2023-06-01",
             "content-type": "application/json",
         }
+        if self.auth_token:
+            headers["Authorization"] = f"Bearer {self.auth_token}"
+        if self.api_key:
+            headers["x-api-key"] = self.api_key
 
         # Build SSE event forwarder for streaming deltas to TUI
         def _forward_delta(_event_type: str, data: dict[str, Any]) -> None:

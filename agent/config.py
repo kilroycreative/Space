@@ -27,6 +27,7 @@ class AgentConfig:
     exa_base_url: str = "https://api.exa.ai"
     openai_api_key: str | None = None
     anthropic_api_key: str | None = None
+    anthropic_auth_token: str | None = None
     openrouter_api_key: str | None = None
     cerebras_api_key: str | None = None
     exa_api_key: str | None = None
@@ -57,6 +58,7 @@ class AgentConfig:
             or os.getenv("OPENAI_API_KEY")
         )
         anthropic_api_key = os.getenv("OPENPLANTER_ANTHROPIC_API_KEY") or os.getenv("ANTHROPIC_API_KEY")
+        anthropic_auth_token = os.getenv("OPENPLANTER_ANTHROPIC_AUTH_TOKEN") or os.getenv("ANTHROPIC_AUTH_TOKEN")
         openrouter_api_key = os.getenv("OPENPLANTER_OPENROUTER_API_KEY") or os.getenv("OPENROUTER_API_KEY")
         cerebras_api_key = os.getenv("OPENPLANTER_CEREBRAS_API_KEY") or os.getenv("CEREBRAS_API_KEY")
         exa_api_key = os.getenv("OPENPLANTER_EXA_API_KEY") or os.getenv("EXA_API_KEY")
@@ -79,6 +81,7 @@ class AgentConfig:
             exa_base_url=os.getenv("OPENPLANTER_EXA_BASE_URL", "https://api.exa.ai"),
             openai_api_key=openai_api_key,
             anthropic_api_key=anthropic_api_key,
+            anthropic_auth_token=anthropic_auth_token,
             openrouter_api_key=openrouter_api_key,
             cerebras_api_key=cerebras_api_key,
             exa_api_key=exa_api_key,
